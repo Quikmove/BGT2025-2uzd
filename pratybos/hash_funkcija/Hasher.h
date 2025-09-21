@@ -2,5 +2,5 @@
 #include <string>
 class Hasher {
     public:
-    static std::string hash256bit(const std::string &input);
+    std::string hash256bit(std::string input);
 };
