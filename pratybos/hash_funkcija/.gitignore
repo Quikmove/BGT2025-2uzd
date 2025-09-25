@@ -7,7 +7,6 @@ Makefile
 compile_commands.json
 Testing/
 CTestTestfile.cmake
-
 # Binaries & libs
 *.o
 *.obj
@@ -37,6 +36,7 @@ coverage.*
 *.user
 *.sdf
 ipch/
+.clangd
 
 # Editor temp files
 *~
