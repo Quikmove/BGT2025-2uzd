@@ -1,9 +1,9 @@
-#include "FileRead.h"
+#include "../../include/FileRead.h"
 #include <filesystem>
 #include <fstream>
 #include <iterator>
-
-std::string read_file_in_memory(const std::filesystem::path &file_path) {
+#include <vector>
+std::string read_file_to_str(const std::filesystem::path &file_path) {
     std::ifstream fd(file_path, std::ios::in | std::ios::binary);
     if(fd.fail()) throw std::filesystem::filesystem_error(
             "file not found",

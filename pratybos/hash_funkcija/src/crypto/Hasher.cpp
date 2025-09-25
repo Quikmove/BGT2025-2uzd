@@ -1,5 +1,4 @@
-#include "Hasher.h"
-#include <array>
+#include "../../include/Hasher.h"
 #include <bitset>
 #include <cstdint>
 #include <cstdlib>
@@ -49,7 +48,7 @@ class PeriodicCounter {
   int count_limit;
 
 public:
-  PeriodicCounter(int count_lim = 5) : count_limit(std::max(count_lim, 1)) {}
+  PeriodicCounter(int count_lim = 5) : count(0), count_limit(std::max(count_lim, 1)) {}
   void Increment() {
     count++;
     if (count >= count_limit)
@@ -59,7 +58,7 @@ public:
 };
 
 void collapse(std::vector<uint8_t> &bytes, int collapseSize) {
-  PeriodicCounter counter(4);
+  PeriodicCounter counter(6);
   std::mt19937 rng;
   std::list<uint8_t> excess(bytes.begin() + collapseSize, bytes.end());
   bytes.erase(bytes.begin() + collapseSize, bytes.end());
@@ -106,17 +105,6 @@ std::vector<bool> to_binary(const std::string &input) {
   return res;
 }
 
-void xorator(std::vector<uint8_t> &bytes, int n) {
-  std::mt19937 rng(((n + bytes[0]) * bytes.size()) - 123);
-  std::uniform_int_distribution<uint8_t> dist(0, bytes.size() - 1);
-  for (int i = 0; i < n; i++) {
-    int i1 = dist(rng);
-    int i2 = dist(rng);
-    auto temp = bytes[i1];
-    bytes[i1] = bytes[i1] ^ bytes[i2];
-    bytes[i2] = bytes[i2] ^ temp;
-  }
-}
 void content_swapper(std::vector<uint8_t> &bytes, int n) {
   std::mt19937 rng(n);
 
@@ -148,9 +136,7 @@ std::string Hasher::hash256bit(const std::string &input) {
 
   // 1 xor viska
   for (int i = 0; i < 32; i++) {
-    auto temp = block[32 - i];
-    block[32 - i] = block[32 - i] ^ block[i];
-    block[i] = block[i] ^ temp;
+    std::swap(block[i], block[i+32]);
   }
   // 2
   content_swapper(block, 100000);

@@ -1,4 +1,4 @@
-#include "parsing_helper_funcs.h"
+#include "../../include/parsing_helper_funcs.h"
 
 char* getCmdOption(char ** begin, char ** end, const std::string & option)
 {
