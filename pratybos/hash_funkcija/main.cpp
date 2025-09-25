@@ -1,7 +1,7 @@
-#include "include/Hasher.h"
-#include "include/FileRead.h"
-#include "include/parsing_helper_funcs.h"
-#include "include/test_file_generator.h"
+#include <Hasher.h>
+#include <FileRead.h>
+#include <parsing_helper_funcs.h>
+#include <test_file_generator.h>
 #include <exception>
 #include <filesystem>
 #include <iostream>

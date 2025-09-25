@@ -44,21 +44,29 @@ configure_file(
         COPYONLY
 )
 add_library(hash_funkcija
-        src/crypto/Hasher.cpp
-    )
+src/crypto/Hasher.cpp
+)
 add_library(file_read
-        src/io/FileRead.cpp
+src/io/FileRead.cpp
 )
 add_library(parser_helper
-        src/cli/parsing_helper_funcs.cpp
+src/cli/parsing_helper_funcs.cpp
 )
 add_library(test_file_gen
-        src/file_gen/test_file_generator.cpp)
+src/file_gen/test_file_generator.cpp)
 add_executable(main
-    main.cpp)
+main.cpp)
 add_executable(bench_gen
-  bench/bench_gen.cpp)
-target_include_directories(hash_funkcija PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+bench/bench_gen.cpp)
+
+add_library(project_includes INTERFACE)
+target_include_directories(project_includes INTERFACE ${CMAKE_SOURCE_DIR}/include)
+
+target_link_libraries(hash_funkcija PUBLIC project_includes)
+target_link_libraries(file_read PUBLIC project_includes)
+target_link_libraries(test_file_gen PUBLIC project_includes)
+target_link_libraries(parser_helper PUBLIC project_includes)
+
 target_link_libraries(main PRIVATE hash_funkcija file_read parser_helper test_file_gen)
 target_link_libraries(bench_gen PRIVATE test_file_gen)
 add_subdirectory(tests)

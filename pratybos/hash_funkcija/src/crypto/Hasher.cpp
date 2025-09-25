@@ -1,4 +1,4 @@
-#include "../../include/Hasher.h"
+#include <Hasher.h>
 #include <bitset>
 #include <cstdint>
 #include <cstdlib>
