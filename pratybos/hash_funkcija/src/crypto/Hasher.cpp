@@ -2,13 +2,10 @@
 #include <bitset>
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
 #include <list>
 #include <numeric>
 #include <random>
 #include <string>
-#include <sys/_types/_blksize_t.h>
-#include <sys/types.h>
 #include <vector>
 /*
 uint8_t: 1
@@ -48,7 +45,8 @@ class PeriodicCounter {
   int count_limit;
 
 public:
-  PeriodicCounter(int count_lim = 5) : count(0), count_limit(std::max(count_lim, 1)) {}
+  PeriodicCounter(int count_lim = 5)
+      : count(0), count_limit(std::max(count_lim, 1)) {}
   void Increment() {
     count++;
     if (count >= count_limit)
@@ -136,7 +134,7 @@ std::string Hasher::hash256bit(const std::string &input) {
 
   // 1 xor viska
   for (int i = 0; i < 32; i++) {
-    std::swap(block[i], block[i+32]);
+    std::swap(block[i], block[i + 32]);
   }
   // 2
   content_swapper(block, 100000);
