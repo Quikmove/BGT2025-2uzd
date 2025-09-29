@@ -4,7 +4,7 @@
 #include <iterator>
 #include <vector>
 #include <FileRead.h>
-std::string read_file_to_str(const std::filesystem::path &file_path) {
+inline std::string read_file_to_str(const std::filesystem::path &file_path) {
     std::ifstream fd(file_path, std::ios::in | std::ios::binary);
     if(fd.fail()) throw std::filesystem::filesystem_error(
             "file not found",
