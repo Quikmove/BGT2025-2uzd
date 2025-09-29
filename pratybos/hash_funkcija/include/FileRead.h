@@ -1,4 +1,4 @@
 #pragma once
 #include <filesystem>
 
-inline std::string read_file_to_str(const std::filesystem::path &file_path);
+std::string ReadFile(const std::filesystem::path &file_path);
