@@ -7,13 +7,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <constants.h>
 
 
-const std::filesystem::path test_dir = "test_files";
-const std::filesystem::path empty_file = test_dir / "empty.txt";
-const std::filesystem::path symbol_path = test_dir / "symbol";
-const std::filesystem::path collision_path = test_dir / "collision";
-const std::filesystem::path avalanche_path = test_dir / "avalanche";
 
 int main(int argc, char *argv[]) {
   std::string input;
@@ -58,6 +54,7 @@ int main(int argc, char *argv[]) {
   if (argc == 1 ) {
     //add interactive input with menu
   }
-  std::string output = Hasher::hash256bit(input);
+  HasherV0_1 hasher;
+  std::string output = hasher.hash256bit(input);
   std::cout << output << std::endl;
 }
