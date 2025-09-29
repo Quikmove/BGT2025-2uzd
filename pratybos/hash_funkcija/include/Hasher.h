@@ -1,13 +1,12 @@
 #pragma once
 #include <string>
 class IHasher {
-    public:
-    virtual std::string hash256bit(const std::string &input) = 0;
+public:
+  virtual ~IHasher() {}
+  virtual std::string hash256bit(const std::string &input) const = 0;
 };
-class HasherV0_1: IHasher {
-    public:
-    HasherV0_1() {
-        
-    }
-    virtual std::string hash256bit(const std::string &input);
+class Hasher : public IHasher {
+public:
+  Hasher() {}
+  virtual std::string hash256bit(const std::string &input) const override final;
 };
