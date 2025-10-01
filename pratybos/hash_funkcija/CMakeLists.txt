@@ -43,6 +43,11 @@ configure_file(
         ${CMAKE_BINARY_DIR}/konstitucija.txt
         COPYONLY
 )
+configure_file(
+  ${CMAKE_SOURCE_DIR}/draw_konstitucija_chart.py
+  ${CMAKE_BINARY_DIR}/draw_konstitucija_chart.py
+  COPYONLY
+)
 add_library(hash_funkcija
 src/crypto/Hasher.cpp
 )
@@ -60,6 +65,8 @@ add_executable(bench_gen
 bench/bench_gen.cpp)
 add_executable(benchmark
 tests/benchmark.cpp)
+add_executable(draw_konstitucija
+src/cli/draw_chart.cpp)
 add_library(project_includes INTERFACE)
 target_include_directories(project_includes INTERFACE ${CMAKE_SOURCE_DIR}/include)
 
