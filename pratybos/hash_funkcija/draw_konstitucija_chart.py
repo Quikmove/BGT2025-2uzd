@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-import os
 import pathlib as pl
 data_path = pl.Path("results/konstitucija.txt")
 output_path = pl.Path("results/konstitucija.png")
