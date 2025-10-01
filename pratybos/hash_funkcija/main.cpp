@@ -12,7 +12,7 @@
 
 int main(int argc, char *argv[]) {
   std::string input;
-  if (cmdOptionExists(argv, argv + argc, "generate")) {
+  if (cmd_option_exists(argv, argv + argc, "generate")) {
     const std::string symbols = "abcdefghijklmnopqrstuvwxyz";
     const auto size_pairs = std::vector<std::pair<int, int>>{
         {10, 100000}, {100, 100000}, {500, 100000}, {1000, 100000}};
@@ -35,16 +35,16 @@ int main(int argc, char *argv[]) {
       std::cout << "Done!\n";
     }
     return 0;
-  } else if (cmdOptionExists(argv, argv + argc, "--file")) {
-    char *option = getCmdOption(argv, argv + argc, "--file");
+  } else if (cmd_option_exists(argv, argv + argc, "--file")) {
+    char *option = get_cmd_option(argv, argv + argc, "--file");
     try {
       input = ReadFile(std::filesystem::path(option));
     } catch (std::exception &e) {
       std::cerr << e.what() << '\n';
       return 1;
     }
-  } else if (cmdOptionExists(argv, argv + argc, "--input")) {
-    char *option = getCmdOption(argv, argv + argc, "--input");
+  } else if (cmd_option_exists(argv, argv + argc, "--input")) {
+    char *option = get_cmd_option(argv, argv + argc, "--input");
     if (!option)
       throw;
     input = option;
