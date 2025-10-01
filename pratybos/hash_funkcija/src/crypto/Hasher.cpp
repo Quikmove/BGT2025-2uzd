@@ -13,7 +13,6 @@ uint32_t: 4
 uint64_t: 8
 bitset<256>:32
 */
-
 std::string to_string(const std::vector<uint8_t> &bytes) {
   std::string res;
   for (unsigned char c : bytes) {
@@ -91,15 +90,11 @@ void collapse(std::vector<uint8_t> &bytes, int collapseSize) {
     excess.pop_front();
   }
 }
-std::vector<bool> to_binary(const std::string &input) {
-  std::list<bool> data;
+std::string to_binary(const std::string &input) {
+  std::string res;
   for (unsigned char ch : input) {
-    while (ch > 0) {
-      data.push_front(ch % 2);
-      ch = ch / 2;
-    }
+    res += std::bitset<8>(ch).to_string();
   }
-  auto res = std::vector<bool>(data.begin(), data.end());
   return res;
 }
 
@@ -125,7 +120,7 @@ std::string to_binary_str(const std::vector<uint8_t> bytes) {
   }
   return res;
 }
-std::string Hasher::hash256bit(const std::string &input) {
+std::string Hasher::hash256bit(const std::string &input) const {
   std::vector<uint8_t> block(64);
   block = std::vector<uint8_t>(input.cbegin(), input.cend());
   expand(block, 64);
