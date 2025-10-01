@@ -6,7 +6,8 @@ data_path = pl.Path("results/konstitucija.txt")
 output_path = pl.Path("results/konstitucija.png")
 if not data_path.exists():
     print("no file found")
-    print(data_path)
+
+    exit(1)
 df = pd.read_csv(data_path, sep=" ", header=None, names=["Lines", "Time"])
 
 plt.plot(df['Lines'], df['Time'], marker="o", linestyle="-")
