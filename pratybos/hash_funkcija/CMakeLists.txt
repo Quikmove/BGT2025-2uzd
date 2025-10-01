@@ -74,7 +74,7 @@ target_link_libraries(hash_funkcija PUBLIC project_includes)
 target_link_libraries(file_read PUBLIC project_includes)
 target_link_libraries(test_file_gen PUBLIC project_includes)
 target_link_libraries(parser_helper PUBLIC project_includes)
-
+target_link_libraries(draw_konstitucija PUBLIC project_includes)
 target_link_libraries(main PRIVATE hash_funkcija file_read parser_helper test_file_gen)
 target_link_libraries(bench_gen PRIVATE test_file_gen)
 target_link_libraries(benchmark PRIVATE hash_funkcija)
