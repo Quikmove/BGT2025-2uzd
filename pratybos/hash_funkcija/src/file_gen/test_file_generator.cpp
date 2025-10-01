@@ -1,4 +1,3 @@
-#include <test_file_generator.h>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -10,7 +9,18 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-
+#include <test_file_generator.h>
+struct SplitMix64 {
+  uint64_t state;
+  explicit SplitMix64(uint64_t seed = 0) : state(seed) {}
+  uint64_t operator()() {
+    uint64_t z = (state += 0x9e3779b97f4a7c15ULL);
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+    return z ^ (z >> 31);
+  }
+};
+std::string generate_random_symbols(int count, SplitMix64 &rng);
 namespace fs = std::filesystem;
 constexpr std::string_view kAlphabet =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -35,16 +45,6 @@ static inline fs::path make_output_path(const fs::path &dir,
   ss << name << '_' << length << '_' << pair_count << ext;
   return dir / ss.str();
 }
-struct SplitMix64 {
-  uint64_t state;
-  explicit SplitMix64(uint64_t seed = 0) : state(seed) {}
-  uint64_t operator()() {
-    uint64_t z = (state += 0x9e3779b97f4a7c15ULL);
-    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
-    z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
-    return z ^ (z >> 31);
-  }
-};
 
 static inline void seed_rng_from_rd(SplitMix64 &rng) {
   std::random_device rd;
@@ -63,7 +63,55 @@ static inline void expand_from_word(uint64_t w, std::string &out) {
     out[i] = kAlphabet[mixed % alph_n];
   }
 }
+void generators::write_symbols(const std::string_view symbols,
+                               const fs::path &output_dir) {
+  ensure_dir_exists(output_dir);
+  for (char c : symbols) {
+    std::string symbol(1, c);
+    auto file_name = output_dir / (symbol + ".txt");
+    std::ofstream oss(file_name, std::fstream::out);
+    oss << symbol;
+    oss.close();
+  }
+};
+void generators::write_random_symbols(int symbol_count, int file_count,
+                                      const fs::path &output_dir) {
+  if (symbol_count < 0) {
+    throw std::runtime_error("symbol count can not be less than zero");
+  }
+  if (file_count < 0) {
+    throw std::runtime_error("file count can not be less than zero");
+  }
 
+  ensure_dir_exists(output_dir);
+
+  SplitMix64 rng(0);
+  seed_rng_from_rd(rng);
+
+  for (int i = 0; i < file_count; i++) {
+    std::ofstream oss(output_dir / (std::to_string(i) + ".txt"));
+    if (!oss)
+      throw std::runtime_error("failed to open output file for writing");
+
+    std::string randomSymbols = generate_random_symbols(symbol_count, rng);
+    oss << randomSymbols;
+    oss.close();
+  }
+}
+std::string generate_random_symbols(int count, SplitMix64 &rng) {
+  if (count < 0)
+    throw std::invalid_argument("count must be >= 0");
+  std::string out;
+  out.resize(static_cast<size_t>(count));
+  const size_t alph_n = kAlphabet.size();
+  for (int i = 0; i < count; ++i) {
+    uint64_t w = rng();
+    unsigned char base =
+        static_cast<unsigned char>((w >> ((i % 8) * 8)) & 0xFFu);
+    out[static_cast<size_t>(i)] = kAlphabet[base % alph_n];
+  }
+  return out;
+}
 void generators::write_collision_pairs(int length, const fs::path &output_dir,
                                        int pair_count,
                                        std::optional<std::uint64_t> seed) {
