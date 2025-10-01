@@ -58,7 +58,8 @@ add_executable(main
 main.cpp)
 add_executable(bench_gen
 bench/bench_gen.cpp)
-
+add_executable(benchmark
+tests/benchmark.cpp)
 add_library(project_includes INTERFACE)
 target_include_directories(project_includes INTERFACE ${CMAKE_SOURCE_DIR}/include)
 
@@ -69,4 +70,5 @@ target_link_libraries(parser_helper PUBLIC project_includes)
 
 target_link_libraries(main PRIVATE hash_funkcija file_read parser_helper test_file_gen)
 target_link_libraries(bench_gen PRIVATE test_file_gen)
+target_link_libraries(benchmark PRIVATE hash_funkcija)
 add_subdirectory(tests)
