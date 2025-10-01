@@ -35,7 +35,7 @@ void expand(std::vector<uint8_t> &bytes, int expandSize = 64) {
   while (bytes.size() < expandSize) {
     unsigned long suma = std::accumulate(bytes.begin(), bytes.end(), 0);
     suma = suma * bytes[bytes.size() - 1] + bytes.size();
-    suma = suma % 95 + 32;
+    suma = suma % 256;
     bytes.emplace_back(suma);
   }
 }
@@ -55,17 +55,19 @@ public:
 };
 
 void collapse(std::vector<uint8_t> &bytes, int collapseSize) {
-  PeriodicCounter counter(6);
-  std::mt19937 rng;
   std::list<uint8_t> excess(bytes.begin() + collapseSize, bytes.end());
-  bytes.erase(bytes.begin() + collapseSize, bytes.end());
-  bytes.shrink_to_fit();
-  std::uniform_int_distribution<uint8_t> dist(0, 255);
+  std::vector<uint32_t> seed_data;
+  for (auto b : excess)
+  seed_data.push_back(static_cast<uint32_t>(b) + 0x820a3f8bu);
+
+bytes.erase(bytes.begin() + collapseSize, bytes.end());
+std::uniform_int_distribution<int> dist(0, 255);
+std::seed_seq seq(seed_data.begin(), seed_data.end());
+std::mt19937 rng(seq);
   while (!excess.empty()) {
-    rng.seed(excess.front());
     uint8_t val = dist(rng);
     for (unsigned char &i : bytes) {
-      switch (counter.getCount()) {
+      switch (val % 6) {
       case 0:
         i = i + val;
         break;
@@ -85,7 +87,6 @@ void collapse(std::vector<uint8_t> &bytes, int collapseSize) {
         i = i | val;
         break;
       }
-      counter.Increment();
     }
     excess.pop_front();
   }
@@ -99,9 +100,12 @@ std::string to_binary(const std::string &input) {
 }
 
 void content_swapper(std::vector<uint8_t> &bytes, int n) {
-  std::mt19937 rng(n);
+ 
+  std::seed_seq seed_data(bytes.begin(), bytes.end());
+  
+  std::mt19937 rng(seed_data);
 
-  std::uniform_int_distribution<uint8_t> dist(0, bytes.size() - 1);
+  std::uniform_int_distribution<int> dist(0, bytes.size() - 1);
   for (int i = 0; i < n; i++) {
     int i1 = dist(rng);
     int i2 = dist(rng);
@@ -127,14 +131,10 @@ std::string Hasher::hash256bit(const std::string &input) const {
 
   // pipeline
 
-  // 1 xor viska
   for (int i = 0; i < 32; i++) {
     std::swap(block[i], block[i + 32]);
   }
-  // 2
-  content_swapper(block, 100000);
+  content_swapper(block, 10000);
   collapse(block, 32);
-
-  // std::cout << "after collapsing size:" << block.size() << '\n';
-  return to_hex(to_string(block)); //+ '\n' + to_binary_str(block);
+  return to_hex(to_string(block)); 
 }
