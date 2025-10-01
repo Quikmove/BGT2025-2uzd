@@ -2,14 +2,16 @@
 #include <FileWrite.h>
 #include <Hasher.h>
 #include <constants.h>
+#include <cstddef>
 #include <exception>
 #include <filesystem>
 #include <iostream>
 #include <parsing_helper_funcs.h>
+#include <random>
 #include <string>
 #include <test_file_generator.h>
 #include <vector>
-
+const auto salt = "2a-sasdn021312==s";
 int main(int argc, char *argv[]) {
   std::string input;
   if (cmd_option_exists(argv, argv + argc, "generate")) {
@@ -48,6 +50,11 @@ int main(int argc, char *argv[]) {
     if (!option)
       throw;
     input = option;
+    if(cmd_option_exists(argv, argv+argc, "--salt")) {
+      char *option = get_cmd_option(argv, argv+argc, "--salt");
+      if(!option) throw;
+      input += salt;
+    }
   }
   if (argc == 1) {
     // add interactive input with menu
