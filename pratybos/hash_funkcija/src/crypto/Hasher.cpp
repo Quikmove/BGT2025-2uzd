@@ -134,7 +134,7 @@ std::string Hasher::hash256bit(const std::string &input) const {
   for (int i = 0; i < 32; i++) {
     std::swap(block[i], block[i + 32]);
   }
-  content_swapper(block, 10000);
+  content_swapper(block, 70000);
   collapse(block, 32);
   return to_hex(to_string(block)); 
 }
