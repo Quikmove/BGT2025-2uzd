@@ -26,14 +26,27 @@ constexpr std::string_view kAlphabet =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 static inline void ensure_dir_exists(const fs::path &p) {
+  if (p.empty())
+    throw std::runtime_error("empty path provided to ensure_dir_exists");
   std::error_code ec;
-  if (!fs::exists(p)) {
-    if (!fs::create_directories(p, ec) && ec) {
-      throw std::runtime_error("failed to create directory: " + p.string());
+  if (fs::exists(p)) {
+    return;
+  }
+  fs::path parent = p.parent_path();
+  if (!parent.empty()) {
+    if (!fs::create_directories(parent, ec) && ec) {
+      throw std::runtime_error("failed to create parent directory: " +
+                               parent.string());
     }
-  } else if (!fs::is_directory(p)) {
-    throw std::runtime_error("path exists and is not a directory: " +
-                             p.string());
+  }
+  const bool has_extension = p.has_extension();
+  const bool path_in_current_dir = parent.empty();
+  if (!has_extension) {
+    if (!path_in_current_dir) {
+      if (!fs::create_directories(p, ec) && ec) {
+        throw std::runtime_error("failed to create directory: " + p.string());
+      }
+    }
   }
 }
 
@@ -74,6 +87,11 @@ void generators::write_symbols(const std::string_view symbols,
     oss.close();
   }
 };
+void generators::write_empty_file(const fs::path &output_file) {
+  ensure_dir_exists(output_file);
+  std::ofstream ofd(output_file);
+  ofd.close();
+}
 void generators::write_random_symbols(int symbol_count, int file_count,
                                       const fs::path &output_dir) {
   if (symbol_count < 0) {

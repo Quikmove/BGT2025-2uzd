@@ -23,4 +23,5 @@ public:
                             const std::filesystem::path &output_dir);
   static void write_random_symbols(int symbol_count, int file_count,
                                    const std::filesystem::path &output_dir);
+    static void write_empty_file(const std::filesystem::path &output_path);
 };
