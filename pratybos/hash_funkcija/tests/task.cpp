@@ -70,7 +70,7 @@ int main() {
     }
     oss << to_markdown_table(poros, "Įvestis", "Hešas") << '\n';
   }
-  // 2. Rezultatas – visada vienodo dydžio (256bitai)
+  // 2. Rezultatas – visada vienodo dydžio (256bitai/64 hex simboliai)
   oss << "\n## 2. Rezultatas – visada vienodo dydžio (256bitai)\n\n";
   {
     int wrong_len_count = 0;
