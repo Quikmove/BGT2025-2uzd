@@ -51,6 +51,8 @@ configure_file(
 add_library(hash_funkcija
 src/crypto/Hasher.cpp
 )
+add_library(sha256_hash_funkcija
+src/crypto/sha256_hasher.cpp)
 add_library(file_read
 src/io/FileRead.cpp
 )
@@ -59,20 +61,36 @@ src/cli/parsing_helper_funcs.cpp
 )
 add_library(test_file_gen
 src/file_gen/test_file_generator.cpp)
+add_library(utils
+src/utils.cpp)
 add_executable(main
 main.cpp)
 add_executable(benchmark
 tests/benchmark.cpp)
 add_executable(draw_konstitucija
 src/cli/draw_chart.cpp)
+add_executable(task 
+tests/task.cpp)
+target_sources(draw_konstitucija PRIVATE src/cli/draw_konstitucija_chart.cpp)
 add_library(project_includes INTERFACE)
 target_include_directories(project_includes INTERFACE ${CMAKE_SOURCE_DIR}/include)
 
 target_link_libraries(hash_funkcija PUBLIC project_includes)
+target_link_libraries(sha256_hash_funkcija PUBLIC project_includes)
+# Find OpenSSL for SHA256 support
+find_package(OpenSSL REQUIRED)
+if(OpenSSL_FOUND)
+  message(STATUS "Found OpenSSL ${OPENSSL_VERSION}")
+  target_link_libraries(sha256_hash_funkcija PUBLIC OpenSSL::Crypto)
+else()
+  message(FATAL_ERROR "OpenSSL not found - required for SHA256 hashing")
+endif()
 target_link_libraries(file_read PUBLIC project_includes)
 target_link_libraries(test_file_gen PUBLIC project_includes)
 target_link_libraries(parser_helper PUBLIC project_includes)
 target_link_libraries(draw_konstitucija PUBLIC project_includes)
-target_link_libraries(main PRIVATE hash_funkcija file_read parser_helper test_file_gen)
-target_link_libraries(benchmark PRIVATE hash_funkcija)
+target_link_libraries(task PUBLIC project_includes)
+target_link_libraries(main PRIVATE hash_funkcija file_read parser_helper test_file_gen sha256_hash_funkcija)
+target_link_libraries(benchmark PRIVATE hash_funkcija sha256_hash_funkcija)
+target_link_libraries(task PRIVATE sha256_hash_funkcija hash_funkcija)
 add_subdirectory(tests)
