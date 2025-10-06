@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import pathlib as pl
-import math
 data_path = pl.Path("results/konstitucija.txt")
 output_path = pl.Path("results/konstitucija.png")
 if not data_path.exists():
