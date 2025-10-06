@@ -3,15 +3,13 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
-#include <vector>
 
 std::string ReadFile(const std::filesystem::path &file_path) {
   std::ifstream fd(file_path, std::ios::in | std::ios::binary);
-  if (fd.fail())
+  if (!fd)
     throw std::filesystem::filesystem_error(
         "file not found", file_path,
         std::make_error_code(std::errc::no_such_file_or_directory));
-  return (std::string((std::istreambuf_iterator<char>(fd)),
-                      std::istreambuf_iterator<char>()));
-  std::vector<char> buffer;
+  return std::string(std::istreambuf_iterator<char>(fd),
+                     std::istreambuf_iterator<char>());
 }
