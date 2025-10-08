@@ -9,7 +9,7 @@ if not data_path.exists():
 df = pd.read_csv(data_path, sep=" ", header=None, names=["Lines", "Time"])
 plt.plot(df['Lines'], df['Time'], marker="o", linestyle="-", label="konstitucija.txt")
 plt.xlabel("Eilučių skaičius")
-plt.ylabel("Laikas")
+plt.ylabel("Laikas (s)")
 plt.title("Konstitucija.txt eilučių skaičiaus hešavimo laikas (5 avg.)")
 plt.legend()
 plt.grid(True)
