@@ -47,7 +47,7 @@ inline uint8_t uint8_t_xor_rotate(uint8_t a, uint8_t b) {
   return (a << b) | (a >> (8 - b));
 }
 inline uint32_t uint32_t_xor_rotate(uint32_t a, uint32_t b) {
-  b = b & 32;
+  b = b % 32;
   if (b == 0)
     return a;
 
@@ -70,7 +70,7 @@ void expand(std::vector<uint8_t> &bytes, int expandSize = 64) {
     uint8_t next =
         (((last + suma) ^ last << 4) + (last << 8) * (suma ^ 0xff)) % 256;
     bytes.emplace_back(next);
-    suma += last;
+    suma += next;
   }
 }
 class PeriodicCounter {
@@ -123,6 +123,8 @@ void collapse(std::vector<uint8_t> &bytes, int collapseSize) {
       uint8_t b = xor_key[cnt++ % xor_key.size()];
       i = uint8_t_xor_rotate(i, b);
       i ^= static_cast<uint8_t>(val * 37);
+      i ^= excess.front();
+      excess.front() = static_cast<uint8_t>(excess.front()+i+cnt);
     }
     excess.pop_front();
   }
@@ -138,8 +140,9 @@ std::string Hasher::hash256bit(const std::string &input) const {
   std::vector<uint8_t> block(consts.bytes, consts.bytes + 64);
   if (input.size() > 0) {
     for (int i = 0; i < input.size(); i++) {
-      size_t index = i % block.size();
-      block[index] ^= static_cast<uint8_t>(input[i]);
+      size_t idx = i % block.size();
+      block[idx] ^= static_cast<uint8_t>(input[i]);
+      block[(idx+11)%block.size()] ^= uint8_t_xor_rotate(input[i]+i, (i *13) & 0xc5);
     }
   }
   expand(block, 64);
