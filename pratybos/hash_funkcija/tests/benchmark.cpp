@@ -1,28 +1,113 @@
 #include "Hasher.h"
 #include <Timer.h>
 #include <bitset>
-#include <optional>
 #include <constants.h>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <ios>
 #include <iostream>
 #include <limits>
 #include <map>
+#include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
-void collision_search(const IHasher &hasher, const std::filesystem::path &dir);
-void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir, std::optional<int> first_n={});
+#include <algorithm>
+struct base_test_info {
+  int line_count;
+  int symbol_count;
+  base_test_info(int lc, int sc) {
+    line_count = lc;
+    symbol_count = sc;
+  }
+};
+
+struct collision_info : public base_test_info {
+  int collision_count;
+  double collision_frequency() const {
+    if (collision_count < 0)
+      return 0;
+    return collision_count * 1.0f / line_count;
+  }
+  collision_info(int line_cnt, int symbol_cnt, int collision_cnt)
+      : base_test_info(line_cnt, symbol_cnt), collision_count(collision_cnt) {}
+};
+struct avalanche_info : public base_test_info {
+  double avg_hex_diff;
+  double avg_bit_diff;
+  double max_hex_diff;
+  double max_bits_diff;
+  double min_bits_diff;
+  double min_hex_diff;
+
+  avalanche_info(int line_cnt, int symbol_cnt, double avg_hex_diff_init,
+                 double avg_bit_diff_init, double max_hex_diff_init,
+                 double max_bits_diff_init, double min_bits_diff_init,
+                 double min_hex_diff_init)
+      : base_test_info(line_cnt, symbol_cnt), avg_hex_diff(avg_hex_diff_init),
+        avg_bit_diff(avg_bit_diff_init), max_hex_diff(max_hex_diff_init),
+        max_bits_diff(max_bits_diff_init), min_bits_diff(min_bits_diff_init),
+        min_hex_diff(min_hex_diff_init) {}
+};
+
+void print_collision_md_table(const std::vector<collision_info> &entries,
+                              std::ostream &os = std::cout) {
+  os << "| Lines | Symbols | Collisions | Frequency |\n";
+  os << "| ----: | ------: | ---------: | --------: |\n";
+  if (entries.empty()) {
+    os << "| _none_ | _none_ | _none_ | _none_ |\n";
+    return;
+  }
+
+  os.setf(std::ios::fixed, std::ios::floatfield);
+  os << std::setprecision(4);
+
+  for (const auto &entry : entries) {
+    os << "| " << entry.line_count << " | " << entry.symbol_count << " | "
+       << entry.collision_count << " | " << entry.collision_frequency()
+       << " |\n";
+  }
+}
+
+void print_avalanche_md_table(const std::vector<avalanche_info> &entries,
+                              std::ostream &os = std::cout) {
+  os << "| Lines | Symbols | Avg Hex % | Avg Bit % | Min Hex % | Min Bit % | "
+        "Max Hex % | Max Bit % |\n";
+  os << "| ----: | ------: | --------: | --------: | --------: | --------: | "
+        "--------: | --------: |\n";
+  if (entries.empty()) {
+    os << "| _none_ | _none_ | _none_ | _none_ | _none_ | _none_ | _none_ | "
+          "_none_ |\n";
+    return;
+  }
+
+  os << std::setprecision(4);
+
+  for (const auto &entry : entries) {
+    os << "| " << entry.line_count << " | " << entry.symbol_count << " | "
+       << entry.avg_hex_diff << " | " << entry.avg_bit_diff << " | "
+       << entry.min_hex_diff << " | " << entry.min_bits_diff << " | "
+       << entry.max_hex_diff << " | " << entry.max_bits_diff << " |\n";
+  }
+}
+void collision_search(const IHasher &hasher, const std::filesystem::path &dir,
+                      std::vector<collision_info> *results = nullptr);
+void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir,
+                      std::vector<avalanche_info> *results = nullptr,
+                      std::optional<int> first_n = std::nullopt);
 void test_konstitucija(const IHasher &hasher, const std::filesystem::path &dir,
                        int test_count = 5);
 int bit_diff(const std::string &hash1, const std::string &hash2);
 int hex_diff(const std::string &hash1, const std::string &hash2);
 int main(int argc, char *argv[]) {
   Hasher hasher;
-  if(argc>1 && std::string(argv[1])=="test") {
+  if (argc > 1 && std::string(argv[1]) == "test") {
     std::cout << "starting small avalanche test..\n";
-    avalanche_search(hasher, kAvalanchePath / "avalanche_pairs_1000_100000.txt",10);
+    avalanche_search(hasher, kAvalanchePath / "avalanche_pairs_1000_100000.txt",
+                     {}, 10);
     std::cout << "finished, exiting..\n";
     return 0;
   }
@@ -30,57 +115,104 @@ int main(int argc, char *argv[]) {
   test_konstitucija(hasher, kKonstitucijaPath);
   std::cout << "konstitucija tests finished!\n";
   std::cout << "starting avalanche test..\n";
-  avalanche_search(hasher, kAvalanchePath);
+  std::vector<avalanche_info> avalanche_results;
+  avalanche_search(hasher, kAvalanchePath, &avalanche_results);
   std::cout << "Avalanche test finished!\n";
   std::cout << "starting collision tests..\n";
-  collision_search(hasher, kCollisionPath);
-  std::cout << "collision tests ended!";
+  std::vector<collision_info> collision_results;
+  collision_search(hasher, kCollisionPath, &collision_results);
+  std::cout << "collision tests ended!\n";
+  std::ofstream oss(kResultsPath / "benchmark_general.md");
+
+  std::sort(avalanche_results.begin(), avalanche_results.end(), [&](const avalanche_info &a1, const avalanche_info &a2) {
+    return a1.symbol_count< a2.symbol_count;
+  });
+  std::sort(collision_results.begin(), collision_results.end(), [&](const collision_info &a1, const collision_info &a2) {
+    return a1.symbol_count< a2.symbol_count;
+  });
+  if (!avalanche_results.empty()) {
+    std::cout << "\nAvanlanche summary (Markdown table):\n";
+    print_avalanche_md_table(avalanche_results, oss);
+  }
+
+  if (!collision_results.empty()) {
+    std::cout << "\nCollision summary (Markdown table):\n";
+    print_collision_md_table(collision_results, oss);
+  }
 }
 
 void test_konstitucija(const IHasher &hasher, const std::filesystem::path &dir,
                        int test_count) {
-
   if (!std::filesystem::is_regular_file(dir)) {
-
     throw std::runtime_error("konstitucija must be a path, not a dir!");
   }
+
   std::ifstream iss(dir);
-  if (iss.fail()) {
-    throw std::runtime_error("something went wrong");
+  if (!iss.is_open()) {
+    throw std::runtime_error("failed to open konstitucija file");
   }
 
-  std::string text;
+  std::vector<std::string> lines;
+  std::string line;
+  while (std::getline(iss, line)) {
+    lines.push_back(line + '\n');
+  }
+  if (lines.empty()) {
+    throw std::runtime_error("konstitucija file is empty");
+  }
+
   std::map<int, double> times;
-  for (int __i = 0; __i < test_count; __i++) {
-    iss.seekg(std::ios::beg);
-    text.clear();
-    std::getline(iss, text);
-    int lines_to_read = 1;
-    while (!iss.eof()) {
+
+  // Warm up any lazy initialization in the hasher.
+  hasher.hash256bit("");
+
+  for (int iter = 0; iter < test_count; ++iter) {
+    for (int block = 1; block <= lines.size(); block *= 2) {
+      std::string text;
+      text.reserve(block * 64);
+      int limit = std::min(block, static_cast<int>(lines.size()));
+      for (size_t i = 0; i < limit; ++i)
+        text.append(lines[i]);
+
       Timer t;
       hasher.hash256bit(text);
-      double time = t.elapsed();
-      times[lines_to_read] += time;
-      for (int i = 0; i < lines_to_read && !iss.eof(); i++) {
-        std::string line;
-        std::getline(iss, line);
-        text += line + '\n';
-      }
-      lines_to_read *= 2;
+      double elapsed = t.elapsed();
+
+      times[static_cast<int>(block)] += elapsed;
     }
-    iss.clear();
+    {
+      std::string text;
+      text.reserve(lines.size() * 64);
+      for (size_t i = 0; i < lines.size(); ++i)
+        text.append(lines[i]);
+      Timer t;
+      hasher.hash256bit(text);
+      double elapsed = t.elapsed();
+      times[static_cast<int>(lines.size())] += elapsed;
+    }
   }
-  for (auto &time : times) {
-    time.second /= test_count;
+
+  for (auto &p : times) {
+    p.second /= static_cast<double>(test_count);
   }
+
   auto results_file = kResultsPath / "konstitucija.txt";
   if (!std::filesystem::exists(kResultsPath)) {
     std::filesystem::create_directories(results_file.parent_path());
   }
   std::ofstream oss(results_file);
+  if (!oss.is_open()) {
+    std::cerr << "Failed to open results file: " << results_file << '\n';
+    return;
+  }
+
   for (const auto &it : times) {
-    std::cout << "lines: " << it.first << ", time: " << it.second << '\n';
-    oss << it.first << " " << it.second << '\n';
+    std::ostringstream fmt;
+    fmt << std::fixed
+        << std::setprecision(std::numeric_limits<double>::max_digits10)
+        << it.second;
+    std::cout << "lines: " << it.first << ", time: " << fmt.str() << '\n';
+    oss << it.first << " " << fmt.str() << '\n';
   }
 }
 void dir_to_paths(std::vector<std::filesystem::path> &paths,
@@ -95,7 +227,8 @@ void dir_to_paths(std::vector<std::filesystem::path> &paths,
   }
 }
 
-void collision_search(const IHasher &hasher, const std::filesystem::path &dir) {
+void collision_search(const IHasher &hasher, const std::filesystem::path &dir,
+                      std::vector<collision_info> *results) {
   std::vector<std::filesystem::path> paths;
   if (std::filesystem::is_regular_file(dir)) {
     paths.push_back(dir);
@@ -104,9 +237,11 @@ void collision_search(const IHasher &hasher, const std::filesystem::path &dir) {
   else {
     throw;
   }
-
   for (const auto &path : paths) {
-    std::size_t collision_count = 0;
+    int line_cnt = 0;
+    int symbol_cnt = 0;
+    bool symbol_count_found = 0;
+    int collision_count = 0;
     std::vector<std::pair<std::string, std::string>> collision_pairs;
     std::cout << "starting test on " << path << '\n';
     std::ifstream iss(path);
@@ -118,6 +253,11 @@ void collision_search(const IHasher &hasher, const std::filesystem::path &dir) {
     std::string word1;
     std::string word2;
     while (iss >> word1 >> word2) {
+      line_cnt++;
+      if (!symbol_count_found) {
+        symbol_cnt = static_cast<int>(word1.size());
+        symbol_count_found = true;
+      }
       const std::string hash1 = hasher.hash256bit(word1);
       const std::string hash2 = hasher.hash256bit(word2);
       if (hash1 == hash2 && word1 != word2) {
@@ -138,9 +278,14 @@ void collision_search(const IHasher &hasher, const std::filesystem::path &dir) {
     for (const auto &pair : collision_pairs) {
       oss << pair.first << ' ' << pair.second << '\n';
     }
+    if (results != nullptr) {
+      results->push_back(collision_info{line_cnt, symbol_cnt, collision_count});
+    }
   }
 }
-void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir, std::optional<int> first_n) {
+void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir,
+                      std::vector<avalanche_info> *results,
+                      std::optional<int> first_n) {
   std::vector<std::filesystem::path> paths;
   if (std::filesystem::is_regular_file(dir)) {
     paths.push_back(dir);
@@ -154,9 +299,10 @@ void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir, s
     double max_percent = std::numeric_limits<double>::min();
     double average_percent = 0.0;
   };
-
   for (const auto &path : paths) {
-    unsigned long long count = 0;
+    int symbol_cnt = 0;
+    bool symbol_count_found = 0;
+    int line_cnt = 0;
     double sum_bit_pct = 0.0;
     double sum_hex_pct = 0.0;
     double min_bit_pct = std::numeric_limits<double>::infinity();
@@ -173,32 +319,42 @@ void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir, s
 
     std::string word1, word2;
     while (iss >> word1 >> word2) {
+      if (!symbol_count_found) {
+        symbol_cnt = static_cast<int>(word1.size());
+        symbol_count_found = true;
+      }
       std::string hash1 = hasher.hash256bit(word1);
       std::string hash2 = hasher.hash256bit(word2);
       int hex_diffs = hex_diff(hash1, hash2);
       int bit_diffs = bit_diff(hash1, hash2);
       double hex_pct = static_cast<double>(hex_diffs) / 64.0 * 100.0;
       double bit_pct = static_cast<double>(bit_diffs) / 256.0 * 100.0;
-      if (first_n && count < *first_n) {
-        std::cout << "DEBUG avalanche pair[" << count << "]: \n  word1='" << word1 << "'\n  word2='" << word2 << "'\n  hex_diffs=" << hex_diffs << " hex_pct=" << hex_pct << " bit_diffs=" << bit_diffs << " bit_pct=" << bit_pct << std::endl;
+      if (first_n && line_cnt < *first_n) {
+        std::cout << "DEBUG avalanche pair[" << line_cnt << "]: \n  word1='"
+                  << word1 << "'\n  word2='" << word2
+                  << "'\n  hex_diffs=" << hex_diffs << " hex_pct=" << hex_pct
+                  << " bit_diffs=" << bit_diffs << " bit_pct=" << bit_pct
+                  << std::endl;
       }
-      if(first_n && count == *first_n) break;
+      if (first_n && line_cnt == *first_n)
+        break;
       sum_hex_pct += hex_pct;
       sum_bit_pct += bit_pct;
       min_hex_pct = std::min(min_hex_pct, hex_pct);
       max_hex_pct = std::max(max_hex_pct, hex_pct);
       min_bit_pct = std::min(min_bit_pct, bit_pct);
       max_bit_pct = std::max(max_bit_pct, bit_pct);
-      ++count;
-      if(count%10000==0) std::cout << "did 10k\n";
+      ++line_cnt;
+      if (line_cnt % 10000 == 0)
+        std::cout << "did 10k\n";
     }
-    if (count == 0) {
+    if (line_cnt == 0) {
       std::cerr << "No pairs found in " << path << '\n';
       continue;
     }
 
-    double avg_hex_pct = sum_hex_pct / static_cast<double>(count);
-    double avg_bit_pct = sum_bit_pct / static_cast<double>(count);
+    double avg_hex_pct = sum_hex_pct / static_cast<double>(line_cnt);
+    double avg_bit_pct = sum_bit_pct / static_cast<double>(line_cnt);
 
     auto result_file = kResultsPath / "avalanche" / path.filename();
     std::filesystem::create_directories(result_file.parent_path());
@@ -206,6 +362,11 @@ void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir, s
     if (!oss.is_open()) {
       std::cerr << "Failed to open results file: " << result_file << '\n';
       continue;
+    }
+    if (results != nullptr) {
+      results->push_back(avalanche_info{line_cnt, symbol_cnt, avg_hex_pct,
+                                        avg_bit_pct, max_hex_pct, max_bit_pct,
+                                        min_bit_pct, min_hex_pct});
     }
     std::cout << "writing results to " << result_file << "...\n";
     oss << "Hex:\n";
