@@ -2,9 +2,11 @@
 #include <bitset>
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
 #include <list>
 #include <numeric>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <vector>
 /*
@@ -13,6 +15,13 @@ uint32_t: 4
 uint64_t: 8
 bitset<256>:32
 */
+
+union consts {
+  unsigned char letters[64] = {
+      "XxFg1yY7HND109623hirD8K8ZjyR3vvzvNnfB2O8rNIaEC4VqJvZyM7--8TzCfu"};
+  uint8_t bytes[64];
+  uint64_t blocks[8];
+} consts;
 std::string to_string(const std::vector<uint8_t> &bytes) {
   std::string res;
   for (unsigned char c : bytes) {
@@ -31,12 +40,37 @@ std::string to_hex(const std::string &text) {
   }
   return res;
 }
+inline uint8_t uint8_t_xor_rotate(uint8_t a, uint8_t b) {
+  b = b % 8;
+  if (b == 0)
+    return a;
+  return (a << b) | (a >> (8 - b));
+}
+inline uint32_t uint32_t_xor_rotate(uint32_t a, uint32_t b) {
+  b = b & 32;
+  if (b == 0)
+    return a;
+
+  return (a << b) | (a >> (32 - b));
+}
+inline uint64_t uint64_t_xor_rotate(uint64_t a, uint64_t b) {
+  b = b % 64;
+  if (b == 0)
+    return a;
+  return (a << b) | (a >> (64 - b));
+}
 void expand(std::vector<uint8_t> &bytes, int expandSize = 64) {
-  while (bytes.size() < expandSize) {
-    unsigned long suma = std::accumulate(bytes.begin(), bytes.end(), 0);
-    suma = suma * bytes[bytes.size() - 1] + bytes.size();
-    suma = suma % 256;
-    bytes.emplace_back(suma);
+  if (expandSize == 0)
+    return;
+  if (bytes.empty())
+    bytes.emplace_back(0);
+  uint64_t suma = std::accumulate(bytes.begin(), bytes.end(), 0);
+  while (bytes.size() % expandSize != 0) {
+    uint8_t last = bytes.back();
+    uint8_t next =
+        (((last + suma) ^ last << 4) + (last << 8) * (suma ^ 0xff)) % 256;
+    bytes.emplace_back(next);
+    suma += last;
   }
 }
 class PeriodicCounter {
@@ -48,25 +82,24 @@ public:
       : count(0), count_limit(std::max(count_lim, 1)) {}
   void Increment() {
     count++;
-    if (count >= count_limit)
+    if (count > count_limit)
       count = 0;
   }
   int getCount() { return count; }
 };
+const std::string xor_key = "ARCHAS MATUOLIS";
 
 void collapse(std::vector<uint8_t> &bytes, int collapseSize) {
+  if (collapseSize == 0 || bytes.size() <= collapseSize)
+    throw std::runtime_error("blogas collapse dydis");
+  PeriodicCounter pc(5);
   std::list<uint8_t> excess(bytes.begin() + collapseSize, bytes.end());
-  std::vector<uint32_t> seed_data;
-  for (auto b : excess)
-  seed_data.push_back(static_cast<uint32_t>(b) + 0x820a3f8bu);
-
-bytes.erase(bytes.begin() + collapseSize, bytes.end());
-std::uniform_int_distribution<int> dist(0, 255);
-std::seed_seq seq(seed_data.begin(), seed_data.end());
-std::mt19937 rng(seq);
+  bytes.erase(bytes.begin() + collapseSize, bytes.end());
   while (!excess.empty()) {
-    uint8_t val = dist(rng);
+    int cnt = 0;
     for (unsigned char &i : bytes) {
+      size_t val = (pc.getCount() + excess.front()) % 256;
+      pc.Increment();
       switch (val % 6) {
       case 0:
         i = i + val;
@@ -87,34 +120,11 @@ std::mt19937 rng(seq);
         i = i | val;
         break;
       }
+      uint8_t b = xor_key[cnt++ % xor_key.size()];
+      i = uint8_t_xor_rotate(i, b);
+      i ^= static_cast<uint8_t>(val * 37);
     }
     excess.pop_front();
-  }
-}
-std::string to_binary(const std::string &input) {
-  std::string res;
-  for (unsigned char ch : input) {
-    res += std::bitset<8>(ch).to_string();
-  }
-  return res;
-}
-
-void content_swapper(std::vector<uint8_t> &bytes, int n) {
- 
-  std::seed_seq seed_data(bytes.begin(), bytes.end());
-  
-  std::mt19937 rng(seed_data);
-
-  std::uniform_int_distribution<int> dist(0, bytes.size() - 1);
-  for (int i = 0; i < n; i++) {
-    int i1 = dist(rng);
-    int i2 = dist(rng);
-    if (i2 == i1)
-      i2 = dist(rng);
-    auto i1first = bytes[i1] & 0x0f;
-    auto i2first = bytes[i2] & 0x0f;
-    bytes[i1] = (bytes[i1] & 0xf0) | i2first;
-    bytes[i2] = (bytes[i2] & 0xf0) | i1first;
   }
 }
 std::string to_binary_str(const std::vector<uint8_t> bytes) {
@@ -125,16 +135,18 @@ std::string to_binary_str(const std::vector<uint8_t> bytes) {
   return res;
 }
 std::string Hasher::hash256bit(const std::string &input) const {
-  std::vector<uint8_t> block(64);
-  block = std::vector<uint8_t>(input.cbegin(), input.cend());
-  expand(block, 64);
-
-  // pipeline
-
-  for (int i = 0; i < 32; i++) {
-    std::swap(block[i], block[i + 32]);
+  std::vector<uint8_t> block(consts.bytes, consts.bytes + 64);
+  if (input.size() > 0) {
+    for (int i = 0; i < input.size(); i++) {
+      size_t index = i % block.size();
+      block[index] ^= static_cast<uint8_t>(input[i]);
+    }
   }
-  content_swapper(block, 70000);
+  expand(block, 64);
+  for (int i = 0; i < block.size() - 1; i++) {
+    block[i] = block[i] ^ xor_key[i % xor_key.size()];
+    block[i + 1] = (block[i + 1] << 4) | (block[i] + i) % 256;
+  }
   collapse(block, 32);
-  return to_hex(to_string(block)); 
+  return to_hex(to_string(block));
 }
