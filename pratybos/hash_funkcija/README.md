@@ -109,8 +109,11 @@ Norint sugeneruoti testus, reikia paleisti šią komandą:
 Norint testuoti, reikia naudoti šią komandą (reikia turėti sugeneravus failus prieštai):
 - `./benchmark`
 
-atlikus testavimą, galima sugeneruoti konstitucijos nuotrauką su:
 
+Taip pat norint sugeneruoti dalinę užduoties dokumentaciją, galima naudoti:
+- `./task`
+
+atlikus testavimą, galima sugeneruoti konstitucijos nuotrauką su:
 - `./draw_konstitucija`
 
 
@@ -233,10 +236,11 @@ Gauti rezultatai (vidurkis paimtas iš 5 testų):
 ![alt text](konstitucija.png)
 
 Galima įžiūrėti, jog algoritmas yra tiesinis. Time complexity: O(n).
-Manau veikia visai neblogu greičiu. Prieš SHA256 ne
-### Avalanche
+Manau veikia visai neblogu greičiu.
 
-Šioje vietoje algoritmas veikia vidutiniškai
+### Lavinos efektas
+
+Šioje vietoje algoritmas veikia vidutiniškai, tikrai nėra labai saugu.
 
 
 | Lines | Symbols | Avg Hex % | Avg Bit % | Min Hex % | Min Bit % | Max Hex % | Max Bit % |
@@ -246,7 +250,7 @@ Manau veikia visai neblogu greičiu. Prieš SHA256 ne
 | 100000 | 500 | 63.41 | 33.26 | 0 | 0 | 100 | 61.33 |
 | 100000 | 1000 | 62.87 | 33.02 | 0 | 0 | 100 | 62.5 |
 
-### Colision
+### Kolizijų paieška
 
 Kolizijų testų rezultatai visai neblogi, kolizijų nepasitaikė.
 
@@ -258,5 +262,17 @@ Kolizijų testų rezultatai visai neblogi, kolizijų nepasitaikė.
 | 100000 | 1000 | 0 | 0.0000 |
 | 100000 | 10 | 0 | 0.0000 |
 
+### Negrįžtamumo demonstracija
+
+| Žodis[:Salt] | Hešas(Žodis+Salt) | 
+| ---- | ---- | 
+| Amerika | 8d6f744eb04eec2d2bb5908564fdf7a50262c5e261afafdb4a89853b7fd90b3c | 
+| Amerika:Lietuva! | 8d6f744eb04eec2d2bb59091b2182d678323c28cb1f6133dceb430264e34fecd | 
+| Jurgis | 6f9ca15ab5ecb375dcb572986a981e6b2013d8e08fe33975dc38882b7f8c5084 |
+| Jurgis:Šaltibarščiai | 6f9ca15ab5ecb375dcb570573118e2a3d13731857d53839854dd171511909d3d |
+
+Yra vietų kur galima būtų patobulinti. Salt naudojimas duoda gana panašų rezultatą.
+
 ## Išvados
 
+Manau išėjo visai neblogai. Nebuvo jokių kolizijų, veikia pakankamai greitai, rašant skirtingus žodžius su skirtingom raidėm gauni skirtingus rezultatus. Tačiau lavinos efektas labai jaučiasi. Pakeičiant vieną raidę nejaučiamas toks didelis hešo pakitimas. Tai yra didelė problema kurios iš tikro nesugalvojau kaip išspręsti.
