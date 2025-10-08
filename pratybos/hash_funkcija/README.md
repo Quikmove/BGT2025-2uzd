@@ -9,16 +9,74 @@ diagramos braižymui:
 - Python
 - uv
 
-## Algoritmo idėja
-* Funkcija paima std::string ir grąžina 64 simbolių heksą (32 baitai).
-* Input/Output: tekstas → mažosiomis raidėmis heks reikšmė.
-- ### Pipeline
-* iš input'o sudaro 64‑baitų bloką (trūkumą pildo expand)
-* sukeičia 32‑baitų puses
-* atlieka ~70k bitų keitimų   (content_swapper), 
-* „suglaudina“ perteklių į pirmus 32 baitus (collapse)
-* grąžina heksą.
+## Algoritmo idėja ir pseudokodas
 
+### Idėja
+
+Šis algoritmas iš ties neturi gilios filosofijos už savęs. Mano tikslas buvo kuo daugiau prigalvoti visokių atsitiktinių dalykų, operacijų ir apdorojimų ir tikėtis, jog veiks. 
+
+### Pseudokodas
+
+```
+xor_key <- "ARCHAS MATUOLIS";
+
+funkcija hash256bit(įvestis):
+    blokas <- 64bitų konstanta: "XxFg1yY7HND109623hirD8K8ZjyR3vvzvNnfB2O8rNIaEC4VqJvZyM7--8TzCfu"
+
+    // tai random tekstas kurį suspausdinėjau klaviatūra.
+
+    Jei įvestis ne tuščia:
+        kiekvieną simbolį dedu į bloką[i mod 64] per XOR.
+        į kaimyną (i + 11 mod 64) taip pat įmaišau rotate8(simbolis + i, (i*13)&0xC5).
+
+    i nuo 0 iki 62:
+        blokas[i] ← blokas[i] XOR xor_key[i mod xor_key.ilgis]
+        blokas[i + 1] ← (blokas[i + 1] << 4) OR ((blokas[i] + i) mod 256)
+
+    suglaudinti_bloką(blokas, 32)
+
+    grąžinti hex(string(blokas))
+```
+```
+funkcija rotate8(reikšmė, posūkis):
+    posūkis ← posūkis mod 8
+    jeigu posūkis == 0: grąžinti reikšmė
+    grąžinti (reikšmė << posūkis) OR (reikšmė >> (8 - posūkis))
+```
+
+```
+pc <- init PeriodicCounter(5)
+// skaičiuoklis nuo 0 iki nurodyto skaičiaus, kurį pasiekus vėl grįžta į 0.
+
+funkcija suglaudinti_bloką(v, dydis):
+    pc.reset()
+    perteklius ← v[dydis..galas]
+    v ← v[0..dydis-1]
+
+    kol perteklius ne tuščias:
+        cnt ← 0
+        kiekvienam baitui v[j]:
+            val ← (pc.getCount() + perteklius.front()) mod 256
+            pc.Increment()
+
+            pasirinkimas ← val mod 6
+            jei pasirinkimas == 0: v[j] ← v[j] + val
+            jei == 1: v[j] ← v[j] - val
+            jei == 2: v[j] ← v[j] * val
+            jei == 3: v[j] ← v[j] XOR val
+            jei == 4: v[j] ← v[j] AND val
+            jei == 5: v[j] ← v[j] OR val
+
+            b ← xor_key[cnt mod xor_key.ilgis]
+            cnt ← cnt + 1
+
+            v[j] ← rotate8(v[j], b)
+            v[j] ← v[j] XOR (val * 37 mod 256)
+            v[j] ← v[j] XOR perteklius.front()
+            perteklius.front() ← (perteklius.front() + v[j] + cnt) mod 256
+
+        perteklius.remove_front()
+```
 ## Paleidimas
 
 `# Unix/MacOS`
@@ -54,6 +112,7 @@ Norint testuoti, reikia naudoti šią komandą (reikia turėti sugeneravus failu
 atlikus testavimą, galima sugeneruoti konstitucijos nuotrauką su:
 
 - `./draw_konstitucija`
+
 
 ## Užduotis
 
@@ -113,10 +172,19 @@ Konstitucija.txt eilučių skaitymo laikai:
 | 512 | 0.001821 |
 | 789 | 0.002795 |
 
+Manau veikia pakankamai greitai.
+
 ### 5. Atsparumas kolizijoms – neturi būti lengva (praktiškai labai sudėtinga) rasti du skirtingus įvedimus, kurie duotų tą patį hash’ą.
 
-### 6. Lavinos efektas (angl. Avalanche effect) – pakeitus vieną simbolį, rezultatas pasikeičia iš esmės.
+| Lines | Symbols | Collisions | Frequency |
+| ----: | ------: | ---------: | --------: |
+| 100000 | 10 | 0 | 0.0000 |
+| 100000 | 100 | 0 | 0.0000 |
+| 100000 | 500 | 0 | 0.0000 |
+| 100000 | 1000 | 0 | 0.0000 |
 
+
+### 6. Lavinos efektas (angl. Avalanche effect) – pakeitus vieną simbolį, rezultatas pasikeičia iš esmės.
 
 | Įvestis | Hešas |
 | ---------- | ---------- |
@@ -179,7 +247,8 @@ Manau veikia visai neblogu greičiu. Prieš SHA256 ne
 | 100000 | 1000 | 62.87 | 33.02 | 0 | 0 | 100 | 62.5 |
 
 ### Colision
-Collision testai atnešė geresnius rezultatus -- kolizijų nė karto nepasitaikė.
+
+Kolizijų testų rezultatai visai neblogi, kolizijų nepasitaikė.
 
 | Lines | Symbols | Collisions | Frequency |
 | ----: | ------: | ---------: | --------: |
