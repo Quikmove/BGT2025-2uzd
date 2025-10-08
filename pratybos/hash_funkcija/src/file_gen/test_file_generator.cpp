@@ -1,3 +1,4 @@
+#include "constants.h"
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -22,8 +23,6 @@ struct SplitMix64 {
 };
 std::string generate_random_symbols(int count, SplitMix64 &rng);
 namespace fs = std::filesystem;
-constexpr std::string_view kAlphabet =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 static inline void ensure_dir_exists(const fs::path &p) {
   if (p.empty())
@@ -76,12 +75,12 @@ static inline void expand_from_word(uint64_t w, std::string &out) {
     out[i] = kAlphabet[mixed % alph_n];
   }
 }
-void generators::write_symbols(const std::string_view symbols,
-                               const fs::path &output_dir) {
+void generators::write_symbols(const fs::path &output_dir, const std::string symbols) {
   ensure_dir_exists(output_dir);
+  int i=1;
   for (char c : symbols) {
     std::string symbol(1, c);
-    auto file_name = output_dir / (symbol + ".txt");
+    auto file_name = output_dir / (std::to_string(i++) + ".txt");
     std::ofstream oss(file_name, std::fstream::out);
     oss << symbol;
     oss.close();
