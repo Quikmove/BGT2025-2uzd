@@ -2,19 +2,11 @@
 #include <bitset>
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
 #include <list>
 #include <numeric>
-#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
-/*
-uint8_t: 1
-uint32_t: 4
-uint64_t: 8
-bitset<256>:32
-*/
 
 union consts {
   unsigned char letters[64] = {
@@ -64,7 +56,7 @@ void expand(std::vector<uint8_t> &bytes, int expandSize = 64) {
     return;
   if (bytes.empty())
     bytes.emplace_back(0);
-  uint64_t suma = std::accumulate(bytes.begin(), bytes.end(), 0);
+  uint64_t suma = std::accumulate(bytes.begin(), bytes.end(), uint64_t());
   while (bytes.size() % expandSize != 0) {
     uint8_t last = bytes.back();
     uint8_t next =
@@ -86,13 +78,15 @@ public:
       count = 0;
   }
   int getCount() { return count; }
+  void reset() { count = 0; }
 };
 const std::string xor_key = "ARCHAS MATUOLIS";
+PeriodicCounter pc(5);
 
 void collapse(std::vector<uint8_t> &bytes, int collapseSize) {
+  pc.reset();
   if (collapseSize == 0 || bytes.size() <= collapseSize)
     throw std::runtime_error("blogas collapse dydis");
-  PeriodicCounter pc(5);
   std::list<uint8_t> excess(bytes.begin() + collapseSize, bytes.end());
   bytes.erase(bytes.begin() + collapseSize, bytes.end());
   while (!excess.empty()) {
@@ -124,7 +118,7 @@ void collapse(std::vector<uint8_t> &bytes, int collapseSize) {
       i = uint8_t_xor_rotate(i, b);
       i ^= static_cast<uint8_t>(val * 37);
       i ^= excess.front();
-      excess.front() = static_cast<uint8_t>(excess.front()+i+cnt);
+      excess.front() = static_cast<uint8_t>(excess.front() + i + cnt);
     }
     excess.pop_front();
   }
@@ -142,7 +136,8 @@ std::string Hasher::hash256bit(const std::string &input) const {
     for (int i = 0; i < input.size(); i++) {
       size_t idx = i % block.size();
       block[idx] ^= static_cast<uint8_t>(input[i]);
-      block[(idx+11)%block.size()] ^= uint8_t_xor_rotate(input[i]+i, (i *13) & 0xc5);
+      block[(idx + 11) % block.size()] ^=
+          uint8_t_xor_rotate(input[i] + i, (i * 13) & 0xc5);
     }
   }
   expand(block, 64);
