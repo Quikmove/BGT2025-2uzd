@@ -1,25 +1,27 @@
+#include "sha256_hasher.h"
 #include <FileRead.h>
 #include <FileWrite.h>
 #include <Hasher.h>
 #include <constants.h>
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <iostream>
 #include <parsing_helper_funcs.h>
-#include <random>
 #include <string>
 #include <test_file_generator.h>
+#include <utils.h>
 #include <vector>
 const auto salt = "2a-sasdn021312==s";
 int main(int argc, char *argv[]) {
   std::string input;
   if (cmd_option_exists(argv, argv + argc, "generate")) {
-    const std::string symbols = "abcdefghijklmnopqrstuvwxyz";
+    generators::write_empty_file(kEmptyFile);
     const auto size_pairs = std::vector<std::pair<int, int>>{
         {10, 100000}, {100, 100000}, {500, 100000}, {1000, 100000}};
     std::cout << "Generating files with one symbol each!\n";
-    generators::write_symbols(symbols, kSymbolPath);
+    generators::write_symbols(kSymbolPath );
     std::cout << "Files with single symbol generated\n";
     std::cout << "Generating files with random symbols\n";
     generators::write_random_symbols(2000, 10, kRandomSymbolPath);
@@ -48,11 +50,13 @@ int main(int argc, char *argv[]) {
   } else if (cmd_option_exists(argv, argv + argc, "--input")) {
     char *option = get_cmd_option(argv, argv + argc, "--input");
     if (!option)
-      throw;
-    input = option;
-    if(cmd_option_exists(argv, argv+argc, "--salt")) {
-      char *option = get_cmd_option(argv, argv+argc, "--salt");
-      if(!option) throw;
+      input = "";
+    else
+      input = option;
+    if (cmd_option_exists(argv, argv + argc, "--salt")) {
+      char *option = get_cmd_option(argv, argv + argc, "--salt");
+      if (!option)
+        throw;
       input += salt;
     }
   }
