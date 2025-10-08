@@ -51,20 +51,20 @@ inline uint64_t uint64_t_xor_rotate(uint64_t a, uint64_t b) {
     return a;
   return (a << b) | (a >> (64 - b));
 }
-void expand(std::vector<uint8_t> &bytes, int expandSize = 64) {
-  if (expandSize == 0)
-    return;
-  if (bytes.empty())
-    bytes.emplace_back(0);
-  uint64_t suma = std::accumulate(bytes.begin(), bytes.end(), uint64_t());
-  while (bytes.size() % expandSize != 0) {
-    uint8_t last = bytes.back();
-    uint8_t next =
-        (((last + suma) ^ last << 4) + (last << 8) * (suma ^ 0xff)) % 256;
-    bytes.emplace_back(next);
-    suma += next;
-  }
-}
+// void expand(std::vector<uint8_t> &bytes, int expandSize = 64) {
+//   if (expandSize == 0)
+//     return;
+//   if (bytes.empty())
+//     bytes.emplace_back(0);
+//   uint64_t suma = std::accumulate(bytes.begin(), bytes.end(), uint64_t());
+//   while (bytes.size() % expandSize != 0) {
+//     uint8_t last = bytes.back();
+//     uint8_t next =
+//         (((last + suma) ^ last << 4) + (last << 8) * (suma ^ 0xff)) % 256;
+//     bytes.emplace_back(next);
+//     suma += next;
+//   }
+// }
 class PeriodicCounter {
   int count;
   int count_limit;
@@ -140,7 +140,6 @@ std::string Hasher::hash256bit(const std::string &input) const {
           uint8_t_xor_rotate(input[i] + i, (i * 13) & 0xc5);
     }
   }
-  expand(block, 64);
   for (int i = 0; i < block.size() - 1; i++) {
     block[i] = block[i] ^ xor_key[i % xor_key.size()];
     block[i + 1] = (block[i + 1] << 4) | (block[i] + i) % 256;
