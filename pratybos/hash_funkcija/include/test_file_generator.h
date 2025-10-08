@@ -1,7 +1,6 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
+#include "constants.h"
 #include <filesystem>
 #include <optional>
 
@@ -19,9 +18,9 @@ public:
                         std::optional<std::uint64_t> seed = std::nullopt);
   static void benchmark_generation(int length, int pair_count,
                                    std::optional<std::uint64_t> seed);
-  static void write_symbols(const std::string_view symbols,
-                            const std::filesystem::path &output_dir);
+  static void write_symbols(const std::filesystem::path &output_dir,
+                            const std::string symbols=kAlphabet);
   static void write_random_symbols(int symbol_count, int file_count,
                                    const std::filesystem::path &output_dir);
-    static void write_empty_file(const std::filesystem::path &output_path);
+  static void write_empty_file(const std::filesystem::path &output_path);
 };
