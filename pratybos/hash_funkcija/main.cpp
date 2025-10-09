@@ -1,3 +1,4 @@
+#include "AIHasher.h"
 #include "sha256_hasher.h"
 #include <FileRead.h>
 #include <FileWrite.h>
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
   if (argc == 1) {
     // add interactive input with menu
   }
-  Hasher hasher;
+  AIHasher hasher;
   std::string output = hasher.hash256bit(input);
   std::cout << output << std::endl;
 }
