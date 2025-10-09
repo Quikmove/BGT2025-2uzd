@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.31)
 project(hash_funkcija)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -31,6 +31,11 @@ endif()
 
 enable_testing()
 
+include(CheckCXXSourceCompiles)
+set(_parallel_test_source "#include <execution>\n#include <numeric>\nint main() { int data[2] = {1, 2}; auto result = std::transform_reduce(std::execution::par, data, data + 2, 0, std::plus<int>(), [](int v){ return v; }); return result; }")
+check_cxx_source_compiles("${_parallel_test_source}" HASHF_HAVE_STD_PARALLEL)
+unset(_parallel_test_source)
+
 include(FetchContent)
 FetchContent_Declare(
     googletest
@@ -38,6 +43,17 @@ FetchContent_Declare(
     GIT_TAG v1.17.0
     )
     FetchContent_MakeAvailable(googletest)
+
+if(NOT HASHF_HAVE_STD_PARALLEL)
+  message(STATUS "std::execution::par not available – fetching oneTBB backend")
+  FetchContent_Declare(
+      oneTBB
+      GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
+      GIT_TAG v2021.12.0
+  )
+  FetchContent_MakeAvailable(oneTBB)
+endif()
+
 configure_file(
         ${CMAKE_SOURCE_DIR}/konstitucija.txt
         ${CMAKE_BINARY_DIR}/konstitucija.txt
@@ -51,6 +67,8 @@ configure_file(
 add_library(hash_funkcija
 src/crypto/Hasher.cpp
 )
+add_library(ai_hash_funkcija
+src/crypto/AIHasher.cpp)
 add_library(sha256_hash_funkcija
 src/crypto/sha256_hasher.cpp)
 add_library(file_read
@@ -76,7 +94,14 @@ add_library(project_includes INTERFACE)
 target_include_directories(project_includes INTERFACE ${CMAKE_SOURCE_DIR}/include)
 
 target_link_libraries(hash_funkcija PUBLIC project_includes)
+if(HASHF_HAVE_STD_PARALLEL)
+  target_compile_definitions(hash_funkcija PUBLIC HASHF_HAS_STD_PARALLEL=1 HASHF_HAS_TBB=0)
+else()
+  target_compile_definitions(hash_funkcija PUBLIC HASHF_HAS_STD_PARALLEL=0 HASHF_HAS_TBB=1)
+  target_link_libraries(hash_funkcija PUBLIC TBB::tbb)
+endif()
 target_link_libraries(sha256_hash_funkcija PUBLIC project_includes)
+target_link_libraries(ai_hash_funkcija PUBLIC project_includes)
 # Find OpenSSL for SHA256 support
 find_package(OpenSSL REQUIRED)
 if(OpenSSL_FOUND)
@@ -90,7 +115,7 @@ target_link_libraries(test_file_gen PUBLIC project_includes)
 target_link_libraries(parser_helper PUBLIC project_includes)
 target_link_libraries(draw_konstitucija PUBLIC project_includes)
 target_link_libraries(task PUBLIC project_includes)
-target_link_libraries(main PRIVATE hash_funkcija file_read parser_helper test_file_gen sha256_hash_funkcija)
-target_link_libraries(benchmark PRIVATE hash_funkcija sha256_hash_funkcija)
-target_link_libraries(task PRIVATE sha256_hash_funkcija hash_funkcija)
+target_link_libraries(main PRIVATE hash_funkcija file_read parser_helper test_file_gen sha256_hash_funkcija ai_hash_funkcija)
+target_link_libraries(benchmark PRIVATE hash_funkcija sha256_hash_funkcija ai_hash_funkcija)
+target_link_libraries(task PRIVATE sha256_hash_funkcija hash_funkcija ai_hash_funkcija)
 add_subdirectory(tests)
