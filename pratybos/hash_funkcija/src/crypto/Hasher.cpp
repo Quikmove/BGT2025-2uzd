@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <list>
-#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <vector>
