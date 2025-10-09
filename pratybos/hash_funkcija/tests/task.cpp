@@ -1,11 +1,14 @@
+#include "AIHasher.h"
 #include "sha256_hasher.h"
 #include <Hasher.h>
+#include <cmath>
 #include <constants.h>
 #include <filesystem>
 #include <fstream>
 #include <ios>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -39,8 +42,33 @@ to_markdown_table(const std::vector<std::pair<std::string, std::string>> &poros,
   }
   return output.str();
 }
+std::string to_markdown_table(const std::vector<std::string> &column1,
+                              const std::vector<std::string> &column2,
+                              const std::vector<std::string> &column3,
+                              std::string column1Name, std::string column2Name,
+                              std::string column3Name) {
+  std::vector<std::string> entries;
+  if (column1.size() != column2.size() || column3.size() != column2.size()) {
+    throw std::runtime_error("Columns are of different length!");
+  }
+  int n = column1.size();
+  for (int i = 0; i < n; i++) {
+    std::ostringstream entry;
+    entry << "| " << column1[i] << " | " << column2[i] << " | " << column3[i]
+          << " |";
+    entries.push_back(entry.str());
+  }
+  std::ostringstream output;
+  output << "| " << column1Name << " | " << column2Name << " | " << column3Name
+         << " |\n";
+  output << "| ---------- | ---------- | ---------- |\n";
+  for (const auto &entry : entries) {
+    output << entry << '\n';
+  }
+  return output.str();
+}
 int main() {
-  SHA256_Hasher hasher;
+  AIHasher hasher;
   const auto words =
       std::vector<std::string>{"lietuva", "Lietuva", "Lietuva!", "Lietuva!!"};
   std::filesystem::path taskResultPath = kResultsPath / "task.md";
@@ -48,11 +76,12 @@ int main() {
   oss << "# Užduotis\n";
   // 1. Įvedimas – bet kokio ilgio eilutė (string)
   oss << "## 1. Įvedimas – bet kokio ilgio eilutė (string)\n\n";
+  int cnt=0;
   {
     std::vector<std::pair<std::string, std::string>> poros;
     bool anyLength = true;
     for (int i = 1; i <= 64; i *= 4) {
-      std::string input = std::string(i, 'a');
+      std::string input = std::string(i, kAlphabet[cnt++% kAlphabet.size()]);
       std::string hash;
       try {
         hash = hasher.hash256bit(input);
@@ -74,15 +103,19 @@ int main() {
   oss << "\n## 2. Rezultatas – visada vienodo dydžio (256bitai)\n\n";
   {
     int wrong_len_count = 0;
-    std::vector<std::pair<std::string, std::string>> poros;
+    std::vector<std::string> ivestis, hesoDydis, hesas;
     for (int i = 1; i <= 64; i *= 4) {
-      std::string input = std::string(i, 'a');
+      std::string input = std::string(i, kAlphabet[cnt++% kAlphabet.size()]);
       std::string output_hash = hasher.hash256bit(input);
-      poros.emplace_back(input, std::to_string(output_hash.size()));
+      ivestis.emplace_back(input);
+      hesoDydis.emplace_back(std::to_string(output_hash.size()));
+      hesas.emplace_back(output_hash);
       if (output_hash.size() != 64)
         wrong_len_count++;
     }
-    oss << to_markdown_table(poros, "Įvestis", "Hešo dydis") << "\n";
+    oss << to_markdown_table(ivestis, hesoDydis, hesas, "Įvestis", "Hešo dydis",
+                             "Hešas")
+        << "\n";
     if (wrong_len_count > 0) {
       oss << "Algoritmas neduoda vienodo dydžio hešų - aptikta "
           << wrong_len_count << "ne 64 simbolių ilgio hešų\n";
@@ -131,10 +164,12 @@ int main() {
     }
   }
 
-  // 5. Atsparumas kolizijoms – neturi būti lengva (praktiškai labai sudėtinga)
-  // rasti du skirtingus įvedimus, kurie duotų tą patį hash’ą
-  oss << "\n## 5. Atsparumas kolizijoms – neturi būti lengva (praktiškai labai "
+  // 5. Atsparumas kolizijoms – neturi būti lengva (praktiškai labai
+  // sudėtinga) rasti du skirtingus įvedimus, kurie duotų tą patį hash’ą
+  oss << "\n## 5. Atsparumas kolizijoms – neturi būti lengva (praktiškai "
+         "labai "
          "sudėtinga)\n";
+
 
   // 6. Lavinos efektas
   oss << "\n## 6. Lavinos efektas\n\n";
