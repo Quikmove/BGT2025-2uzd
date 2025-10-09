@@ -385,6 +385,62 @@ Kolizijų testų rezultatai visai neblogi, kolizijų nepasitaikė.
 
 Manau visai akivaizdu, jog salt naudojimas pakeičia rezultatą neatpažįstamai.
 
+## Palyginimas
+
+## Veikimo sparta
+
+| Eilučių kiekis | AIHasher (s) | Hasher (s) |
+| ---------- | ---------- | ---------- |
+| 1 | 0.00002860000000000 | 0.00009080000000000 |
+| 2 | 0.00003160000000000 | 0.00009460000000000 |
+| 4 | 0.00003320000000000 | 0.00009460000000000 |
+| 8 | 0.00004100000000000 | 0.00009880000000000 |
+| 16 | 0.00005780000000000 | 0.00011940000000000 |
+| 32 | 0.00008720000000000 | 0.00014680000000000 |
+| 64 | 0.00034420000000000 | 0.00020720000000000 |
+| 128 | 0.00058540000000000 | 0.00038080000000000 |
+| 256 | 0.00116880000000000 | 0.00076000000000000 |
+| 512 | 0.00250440000000000 | 0.00160920000000000 |
+| 789 | 0.00382520000000000 | 0.00248440000000000 |
+
+## Lavinos efektas
+
+| Įvestis | AIHasher | Hasher |
+| ---------- | ---------- | ---------- |
+| lietuva | 1a183cb6831f090129720dbc8d92ef67352ea219c3275bf9152e7daf73e5d6b6 | 06ec0c64c58b069ac75e0f47394b99df12232f9eea03f00ab92c8f1778ade62c |
+| Lietuva | a0f54249ec371d2e705b5d5d0385f568dcc7658521125cec56e942a1d1102226 | 06ec0c64c5aa7bf21138cbc92fd4b4df931701e4b436f59658b510de56e84edc |
+| Lietuva! | 7846582e95c228eed6d20d7e69353564f12e43768e46ef8b0d0b75a79990a8b9 | 06ec0c64c5aa7bf21138cbc92fd4b4df931701e4b436f59658b510de56e84edc |
+| Lietuva!! | aa8d7be46f0269f3bcb4887484520a1487050cf5bcb60cd959379f7dc3e0bec7 | 06ec0c64c5aa7bf21138cbc92fd4b4df931701e4b436f59658b5147f09ec8e9c |
+
+| Lines | Symbols | Avg Hex % (Hasher) | Avg Hex % (AIHasher) | Avg Bit % (Hasher) | Avg Bit % (AIHasher) | Min Hex % (Hasher) | Min Hex % (AIHasher) | Min Bit % (Hasher) | Min Bit % (AIHasher) | Max Hex % (Hasher) | Max Hex % (AIHasher) | Max Bit % (Hasher) | Max Bit % (AIHasher) |
+| ----: | ------: | -----------------: | -------------------: | -----------------: | -------------------: | -----------------: | -------------------: | -----------------: | -------------------: | -----------------: | -------------------: | -----------------: | -------------------: |
+| 100000 | 10 | 28.1295 | 93.7429 | 14.7245 | 49.9765 | 0.0000 | 78.1250 | 0.0000 | 36.7188 | 85.9375 | 100.0000 | 49.6094 | 63.6719 |
+| 100000 | 100 | 73.0929 | 93.7448 | 38.3615 | 50.0191 | 0.0000 | 78.1250 | 0.0000 | 36.3281 | 100.0000 | 100.0000 | 62.1094 | 63.6719 |
+| 100000 | 500 | 63.4099 | 93.7502 | 33.2598 | 49.9841 | 0.0000 | 76.5625 | 0.0000 | 36.3281 | 100.0000 | 100.0000 | 61.3281 | 63.6719 |
+| 100000 | 1000 | 62.8730 | 93.7547 | 33.0160 | 50.0062 | 0.0000 | 75.0000 | 0.0000 | 35.9375 | 100.0000 | 100.0000 | 62.5000 | 62.8906 |
+
+## Kolizijų paieška
+| Lines | Symbols | Collisions (Hasher) | Collisions (AIHasher) | Frequency (Hasher) | Frequency (AIHasher) |
+| ----: | ------: | ------------------: | --------------------: | -----------------: | -------------------: |
+| 100000 | 10 | 0 | 0 | 0.0000 | 0.0000 |
+| 100000 | 100 | 0 | 0 | 0.0000 | 0.0000 |
+| 100000 | 500 | 0 | 0 | 0.0000 | 0.0000 |
+| 100000 | 1000 | 0 | 0 | 0.0000 | 0.0000 |
+
+| Eilučių kiekis | AIHasher (s) | Hasher (s) |
+| ---------- | ---------- | ---------- |
+| 1 | 0.00002860000000000 | 0.00009080000000000 |
+| 2 | 0.00003160000000000 | 0.00009460000000000 |
+| 4 | 0.00003320000000000 | 0.00009460000000000 |
+| 8 | 0.00004100000000000 | 0.00009880000000000 |
+| 16 | 0.00005780000000000 | 0.00011940000000000 |
+| 32 | 0.00008720000000000 | 0.00014680000000000 |
+| 64 | 0.00034420000000000 | 0.00020720000000000 |
+| 128 | 0.00058540000000000 | 0.00038080000000000 |
+| 256 | 0.00116880000000000 | 0.00076000000000000 |
+| 512 | 0.00250440000000000 | 0.00160920000000000 |
+| 789 | 0.00382520000000000 | 0.00248440000000000 |
+
 ## Išvados
 
 AI pagalba funkcija buvo patobulinta kardinaliai. Testavimo metu nebuvo užfiksuota nei vienos kolizijos, net keičiant po raidę iš 1000 raidžių įvesties. Veikia 60 procentų lėčiau nei mano kurtas algoritmas iš V1.3 versijos, tačiau užtikrina didesnį saugumą. Galimi patobulinimai: teisingai sukonfiguruoti paralelinius skaičiavimus, nes man atrodo neveikė testuojant. Taip pat galima būtų optimizuoti – nors užtrunka tik kelias šimtąsias sekundės, atliekant 100'000 ar 1'000'000> skaičiavimų šis laikas labai pasijaučia, jog reikia laukti.
