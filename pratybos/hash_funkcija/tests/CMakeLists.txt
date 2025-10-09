@@ -6,6 +6,7 @@ add_executable(
 target_link_libraries(
     hash_funkcija_test
     hash_funkcija
+    ai_hash_funkcija
     file_read
     GTest::gtest_main
 )
