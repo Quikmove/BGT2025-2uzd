@@ -12,6 +12,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -182,36 +183,40 @@ void print_avalanche_md_table(const std::vector<avalanche_info> &entries,
 
 } // namespace
 
-void collision_search(const IHasher &hasher, const std::filesystem::path &dir,
+void collision_search(const std::string &label, const IHasher &hasher,
+                      const std::filesystem::path &dir,
                       std::vector<collision_info> *results = nullptr);
-void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir,
+void avalanche_search(const std::string &label, const IHasher &hasher,
+                      const std::filesystem::path &dir,
                       std::vector<avalanche_info> *results = nullptr,
                       std::optional<int> first_n = std::nullopt);
-void test_konstitucija(const IHasher &hasher, const std::filesystem::path &dir,
-                       int test_count = 5);
+std::vector<std::pair<int, double>>
+test_konstitucija(const IHasher &hasher, const std::filesystem::path &dir,
+                  int test_count = 5);
 int bit_diff(const std::string &hash1, const std::string &hash2);
 int hex_diff(const std::string &hash1, const std::string &hash2);
 
 int main(int argc, char *argv[]) {
-  AIHasher hasher;
+  std::vector<std::pair<std::string, std::unique_ptr<IHasher>>> hashers;
+  hashers.emplace_back("asmeninis", std::make_unique<Hasher>());
+  hashers.emplace_back("ai", std::make_unique<AIHasher>());
+
   if (argc > 1 && std::string(argv[1]) == "test") {
     std::cout << "starting small avalanche test..\n";
-    avalanche_search(hasher, kAvalanchePath / "avalanche_pairs_1000_100000.txt",
-                     {}, 10);
+    std::vector<avalanche_info> sample_results;
+  avalanche_search(hashers.front().first, *hashers.front().second,
+           kAvalanchePath / "avalanche_pairs_1000_100000.txt",
+           &sample_results, 10);
     std::cout << "finished, exiting..\n";
     return 0;
   }
+
+  std::map<int, std::map<std::string, double>> konstitucija_times;
+  std::map<std::string, std::vector<avalanche_info>> avalanche_results;
+  std::map<std::string, std::vector<collision_info>> collision_results;
+
   std::cout << "starting konstitucija test..\n";
-  test_konstitucija(hasher, kKonstitucijaPath);
-  std::cout << "konstitucija tests finished!\n";
-  std::cout << "starting avalanche test..\n";
-  std::vector<avalanche_info> avalanche_results;
-  avalanche_search(hasher, kAvalanchePath, &avalanche_results);
-  std::cout << "Avalanche test finished!\n";
-  std::cout << "starting collision tests..\n";
-  std::vector<collision_info> collision_results;
-  collision_search(hasher, kCollisionPath, &collision_results);
-  std::cout << "collision tests ended!\n";
+
   std::ofstream oss;
   bool write_summary_to_file = false;
   try {
@@ -232,27 +237,75 @@ int main(int argc, char *argv[]) {
            std::tie(rhs.symbol_count, rhs.line_count);
   };
 
-  std::sort(avalanche_results.begin(), avalanche_results.end(), avalanche_cmp);
-  std::sort(collision_results.begin(), collision_results.end(), collision_cmp);
-  if (!avalanche_results.empty()) {
-    std::cout << "\nAvanlanche summary (Markdown table):\n";
-    print_avalanche_md_table(avalanche_results);
-    if (write_summary_to_file) {
-      print_avalanche_md_table(avalanche_results, oss);
+  for (auto &entry : hashers) {
+    const std::string &label = entry.first;
+    IHasher &hasher = *entry.second;
+
+    std::cout << "\n== " << label << " ==\n";
+
+    const auto timings = test_konstitucija(hasher, kKonstitucijaPath);
+    for (const auto &[line_count, elapsed] : timings) {
+      konstitucija_times[line_count][label] = elapsed;
+      std::cout << "lines: " << line_count << ", time: "
+                << format_seconds(elapsed) << '\n';
+    }
+
+    std::vector<avalanche_info> avalanche_data;
+  avalanche_search(label, hasher, kAvalanchePath, &avalanche_data);
+    std::sort(avalanche_data.begin(), avalanche_data.end(), avalanche_cmp);
+    avalanche_results[label] = avalanche_data;
+
+    std::vector<collision_info> collision_data;
+  collision_search(label, hasher, kCollisionPath, &collision_data);
+    std::sort(collision_data.begin(), collision_data.end(), collision_cmp);
+    collision_results[label] = collision_data;
+
+    if (!avalanche_data.empty()) {
+      std::cout << "\nAvanlanche summary (" << label << "):\n";
+      print_avalanche_md_table(avalanche_data);
+      if (write_summary_to_file) {
+        oss << "\n## Avalanche (" << label << ")\n";
+        print_avalanche_md_table(avalanche_data, oss);
+      }
+    }
+
+    if (!collision_data.empty()) {
+      std::cout << "\nCollision summary (" << label << "):\n";
+      print_collision_md_table(collision_data);
+      if (write_summary_to_file) {
+        oss << "\n## Collision (" << label << ")\n";
+        print_collision_md_table(collision_data, oss);
+      }
     }
   }
 
-  if (!collision_results.empty()) {
-    std::cout << "\nCollision summary (Markdown table):\n";
-    print_collision_md_table(collision_results);
-    if (write_summary_to_file) {
-      print_collision_md_table(collision_results, oss);
+  const auto results_file = kResultsPath / "konstitucija.txt";
+  try {
+    std::ofstream konstitucija_stream = open_ofstream(results_file);
+    konstitucija_stream << "Lines";
+    for (const auto &entry : hashers) {
+      konstitucija_stream << ' ' << entry.first;
     }
+    konstitucija_stream << '\n';
+    for (const auto &[line_count, timings] : konstitucija_times) {
+      konstitucija_stream << line_count;
+      for (const auto &entry : hashers) {
+        const auto it = timings.find(entry.first);
+        const double value = it == timings.end() ? 0.0 : it->second;
+        konstitucija_stream << ' ' << format_seconds(value);
+      }
+      konstitucija_stream << '\n';
+    }
+  } catch (const std::exception &e) {
+    std::cerr << e.what() << '\n';
   }
+
+  std::cout << "konstitucija tests finished!\n";
 }
 
-void test_konstitucija(const IHasher &hasher, const std::filesystem::path &dir,
-                       int test_count) {
+std::vector<std::pair<int, double>>
+test_konstitucija(const IHasher &hasher, const std::filesystem::path &dir,
+                  int test_count) {
   if (!std::filesystem::is_regular_file(dir)) {
     std::ostringstream msg;
     msg << "konstitucija path '" << dir << "' must be a regular file";
@@ -303,22 +356,15 @@ void test_konstitucija(const IHasher &hasher, const std::filesystem::path &dir,
     time_entry.second /= static_cast<double>(test_count);
   }
 
-  const auto results_file = kResultsPath / "konstitucija.txt";
-  std::ofstream oss;
-  try {
-    oss = open_ofstream(results_file);
-  } catch (const std::exception &e) {
-    std::cerr << e.what() << '\n';
-    return;
-  }
-
+  std::vector<std::pair<int, double>> results;
+  results.reserve(times.size());
   for (const auto &[line_count, elapsed] : times) {
-    const auto formatted = format_seconds(elapsed);
-    std::cout << "lines: " << line_count << ", time: " << formatted << '\n';
-    oss << line_count << ' ' << formatted << '\n';
+    results.emplace_back(line_count, elapsed);
   }
+  return results;
 }
-void collision_search(const IHasher &hasher, const std::filesystem::path &dir,
+void collision_search(const std::string &label, const IHasher &hasher,
+                      const std::filesystem::path &dir,
                       std::vector<collision_info> *results) {
   std::vector<std::filesystem::path> paths;
   try {
@@ -337,7 +383,7 @@ void collision_search(const IHasher &hasher, const std::filesystem::path &dir,
     bool symbol_count_found = false;
     int collision_count = 0;
     std::vector<std::pair<std::string, std::string>> collision_pairs;
-    std::cout << "starting test on " << path << '\n';
+  std::cout << "starting test on [" << label << "] " << path << '\n';
     std::ifstream iss;
     try {
       iss = open_ifstream(path);
@@ -362,7 +408,8 @@ void collision_search(const IHasher &hasher, const std::filesystem::path &dir,
       }
     }
 
-    auto results_file = kResultsPath / "collision" / path.filename();
+  const auto filename = path.filename().string();
+  auto results_file = kResultsPath / "collision" / (label + "_" + filename);
     std::ofstream oss;
     try {
       oss = open_ofstream(results_file);
@@ -370,7 +417,7 @@ void collision_search(const IHasher &hasher, const std::filesystem::path &dir,
       std::cerr << e.what() << '\n';
       continue;
     }
-    std::cout << "writing to file " << results_file << "...\n";
+  std::cout << "writing to file " << results_file << "...\n";
     oss << "Collision count: " << collision_count << '\n';
     for (const auto &pair : collision_pairs) {
       oss << pair.first << ' ' << pair.second << '\n';
@@ -380,7 +427,8 @@ void collision_search(const IHasher &hasher, const std::filesystem::path &dir,
     }
   }
 }
-void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir,
+void avalanche_search(const std::string &label, const IHasher &hasher,
+                      const std::filesystem::path &dir,
                       std::vector<avalanche_info> *results,
                       std::optional<int> first_n) {
   std::vector<std::filesystem::path> paths;
@@ -405,7 +453,7 @@ void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir,
     double min_hex_pct = std::numeric_limits<double>::infinity();
     double max_hex_pct = -std::numeric_limits<double>::infinity();
 
-    std::cout << "starting test on " << path << std::endl;
+  std::cout << "starting test on [" << label << "] " << path << std::endl;
     std::ifstream iss;
     try {
       iss = open_ifstream(path);
@@ -454,7 +502,8 @@ void avalanche_search(const IHasher &hasher, const std::filesystem::path &dir,
     double avg_hex_pct = sum_hex_pct / static_cast<double>(line_cnt);
     double avg_bit_pct = sum_bit_pct / static_cast<double>(line_cnt);
 
-    auto result_file = kResultsPath / "avalanche" / path.filename();
+  const auto filename = path.filename().string();
+  auto result_file = kResultsPath / "avalanche" / (label + "_" + filename);
     std::ofstream oss;
     try {
       oss = open_ofstream(result_file);
