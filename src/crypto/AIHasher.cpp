@@ -1,4 +1,4 @@
-#include <AIHasher.h>
+#include <crypto/AIHasher.h>
 
 #ifndef HASHF_HAS_STD_PARALLEL
 #define HASHF_HAS_STD_PARALLEL 0

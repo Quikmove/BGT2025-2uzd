@@ -1,11 +1,10 @@
-#include <sha256_hasher.h>
+#include <crypto/sha256_hasher.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 
 std::string SHA256_Hasher::hash256bit(const std::string &input) const {
   const EVP_MD *md = EVP_sha256();
   if (!md) {
-    // Fallback: return empty string on error
     return {};
   }
 

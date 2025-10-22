@@ -1,5 +1,5 @@
 #pragma once
-#include <IHasher.h>
+#include "IHasher.h"
 #include <string>
 
 class AIHasher final: public IHasher {
