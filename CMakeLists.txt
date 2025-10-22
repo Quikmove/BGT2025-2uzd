@@ -44,15 +44,7 @@ FetchContent_Declare(
     )
     FetchContent_MakeAvailable(googletest)
 
-if(NOT HASHF_HAVE_STD_PARALLEL)
-  message(STATUS "std::execution::par not available – fetching oneTBB backend")
-  FetchContent_Declare(
-      oneTBB
-      GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-      GIT_TAG v2021.12.0
-  )
-  FetchContent_MakeAvailable(oneTBB)
-endif()
+
 
 configure_file(
         ${CMAKE_SOURCE_DIR}/konstitucija.txt
@@ -92,6 +84,11 @@ tests/task.cpp)
 target_sources(draw_konstitucija PRIVATE src/cli/draw_konstitucija_chart.cpp)
 add_library(project_includes INTERFACE)
 target_include_directories(project_includes INTERFACE ${CMAKE_SOURCE_DIR}/include)
+
+if(NOT HASHF_HAVE_STD_PARALLEL)
+  find_package(TBB REQUIRED)
+  target_link_libraries(hash_funkcija PUBLIC TBB::tbb)
+endif()
 
 target_link_libraries(hash_funkcija PUBLIC project_includes)
 if(HASHF_HAVE_STD_PARALLEL)
